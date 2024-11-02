@@ -1,0 +1,179 @@
+/* ベース設定 */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* 全体のコンテナ */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ヘッダー */
+.header {
+    background-color: #f1f1f1;
+    padding: 4px 10px;
+    text-align: center;
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+.header h1 {
+    font-size: 1em;
+    margin: 0;
+    color: #333;
+}
+
+/* スクロール可能なコンテンツ領域 */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+    background-image: 
+        linear-gradient(to bottom, rgba(208, 231, 255, 0.5) 1px, transparent 1px), 
+        linear-gradient(to right, rgba(208, 231, 255, 0.5) 1px, transparent 1px), 
+        linear-gradient(to right, #4a90e2 1px, transparent 1px), /* 二重線1本目 */
+        linear-gradient(to right, #4a90e2 1px, transparent 1px); /* 二重線2本目 */
+    background-size: 20px 20px, 20px 20px, 1px 100%, 1px 100%;
+    background-position: left 130px top, left 130px top, left 129px top, left 131px top;
+    background-repeat: repeat, repeat, no-repeat, no-repeat;
+    background-attachment: local;
+}
+
+/* エントリリスト */
+.entries-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.entry-date {
+    margin: 0;
+    padding: 8px 0;
+    font-size: 1em;
+    font-weight: bold;
+    color: #333;
+    border-bottom: 1px solid #4a90e2;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 2;
+}
+
+/* エントリ全体のスタイル */
+.entry-item {
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    white-space: pre-wrap;
+}
+
+/* タイムスタンプ */
+.timestamp {
+    font-size: 0.8em;
+    color: #666;
+    flex-shrink: 0;
+    text-align: right;
+    width: 90px;
+    padding-right: 25px;
+}
+
+/* ログテキスト */
+.log-text {
+    font-size: 0.9em;
+    color: #444;
+    word-wrap: break-word;
+    flex: 1;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0 0 0 16px;
+}
+
+.log-text p {
+    margin: 0;
+}
+
+/* resize-divider */
+.resize-divider {
+    width: 100%;
+    height: 4px;
+    background-color: #ccc;
+    cursor: ns-resize;
+    position: relative;
+}
+
+/* フッター */
+.footer {
+    background-color: #f1f1f1;
+    padding: 4px;
+    display: flex;
+    align-items: flex-start;
+    flex-shrink: 0;
+    height: 20vh; /* フッターの高さを設定 */
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    overflow: hidden; /* フッター内のオーバーフローを隠す */
+}
+
+/* Markdownエディタ */
+.input-box {
+    flex: 1;
+    font-size: 0.9em;
+    box-sizing: border-box;
+    resize: none;
+    width: 100%; /* 横幅をフッター全体に合わせる */
+}
+
+/* EasyMDEエディタコンテナの高さを絶対値に設定 */
+.easyMDEContainer {
+    height: 100%; /* エディタ全体の高さを300pxに固定 */
+    width: 100% !important; /* 横幅をフッターに合わせる */
+    box-sizing: border-box;
+}
+
+/* エディタ部分 (CodeMirror) の高さ調整 */
+.CodeMirror {
+    max-height: 100%; /* フッターの高さに応じて100%に */
+    overflow-y: auto; /* 縦スクロールを有効化 */
+    overflow-x: auto; /* 横スクロールを非表示（必要であればautoに） */
+    box-sizing: border-box;
+    padding-right: 10px; /* スクロールバーとテキストの間に余白 */
+}
+/* ツールバーとステータスバーの高さ調整 */
+.editor-toolbar, .editor-statusbar {
+    width: 100% !important; /* 横幅を100%に合わせる */
+}
+
+/* Add Entry ボタン */
+.add-button {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    padding: 6px 10px;
+    font-size: 0.9em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    z-index: 2;
+}
+
+.add-button:hover {
+    background-color: #0056b3;
+}

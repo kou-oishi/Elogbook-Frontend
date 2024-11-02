@@ -1,0 +1,27 @@
+<link data-trunk rel="rust" href="../Cargo.toml">
+<link data-trunk rel="css" href="./styles.css">
+<link data-trunk rel="copy-file" href="./resize.js">
+<link data-trunk rel="copy-file" href="./textarea.js">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elogbook</title>
+
+    <!-- EasyMDE -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module">
+        import init from './pkg/frontend.js';
+        init();
+    </script>
+    <script src="resize.js" defer></script>
+    <script src="textarea.js" defer></script>
+</body>
+</html>
