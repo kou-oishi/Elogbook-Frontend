@@ -2,14 +2,15 @@
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use yew::prelude::*;
-use gloo_net::http::{Request, Response};
+use gloo_net::http::{Request};
 use gloo_timers::callback::Timeout; // gloo_timersからTimeoutをインポート
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{Element, HtmlElement, HtmlInputElement, MutationObserver, MutationObserverInit, MutationRecord};
+use web_sys::{HtmlElement};
 use anyhow::Error;
-use chrono::{DateTime, Utc, Local};
+use chrono::{DateTime, Local};
+use serde::{Deserialize};
 use serde_json::json; // JSONエンコード用にserde_jsonをインポート
-use pulldown_cmark::{Parser, Options, html};
+use pulldown_cmark::{Parser, html};
 use yew::virtual_dom::VNode;
 
 // Convert markdown to html
@@ -25,20 +26,41 @@ fn markdown_to_html(content: &str) -> Html {
     VNode::VRef(div.into())
 }
 
+// From the backend 
+#[derive(Debug, Deserialize)]  // Deserializeを追加
+struct EntryResponse {
+    id: String,           
+    content: String,      
+    created_at: String,   
+}
+impl EntryResponse {
+    fn to_entry(self) -> Option<Entry> {
+        if let Ok(datetime) = DateTime::parse_from_rfc3339(&self.created_at) {
+            Some(Entry {
+                id: self.id,
+                log: self.content,
+                timestamp: datetime.with_timezone(&Local),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+
 pub struct Entry {
-    id: i32,
+    id: String,
     log: String,
     timestamp: DateTime<Local>,
 }
-
 impl Entry {
-    fn new(id:i32, log:String, timestamp:DateTime<Local>) -> Self {
+    fn new(id:String, log:String, timestamp:DateTime<Local>) -> Self {
         Self{id:id, log:log, timestamp:timestamp}
     }
 }
 
 pub struct Model {
-    entry: String,
+    entry:   String,
     entries: Vec<Entry>,
     limit:   i64,
     offset:  i64,
@@ -148,16 +170,11 @@ impl Component for Model {
                         .send()
                         .await
                     {
-                        if let Ok(json) = response.json::<Vec<(i32, String, String)>>().await {
+                        if let Ok(json) = response.json::<Vec<EntryResponse>>().await {
                             let entries: Vec<Entry> = 
-                                json.into_iter().filter_map(|(id, log, ts)| {
-                                    if let Ok(datime) = DateTime::parse_from_rfc3339(&ts) {
-                                        Some(Entry::new(id, log, datime.with_timezone(&Local)))  
-                                    } else {
-                                        None
-                                    } 
-                                })
-                                .collect();
+                                json.into_iter().filter_map(|entry_response| {
+                                    entry_response.to_entry()
+                                }).collect();
                             
                             // Only taking the newly entered entry
                             if limit == 1 && offset == 0 {
