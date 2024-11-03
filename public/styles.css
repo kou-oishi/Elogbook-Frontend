@@ -122,7 +122,7 @@ html, body {
     display: flex;
     align-items: flex-start;
     flex-shrink: 0;
-    height: 20vh; /* フッターの高さを設定 */
+    height: 15vh; /* フッターの高さを設定 */
     position: sticky;
     bottom: 0;
     z-index: 1;
@@ -132,7 +132,7 @@ html, body {
 /* Markdownエディタ */
 .input-box {
     flex: 1;
-    font-size: 0.9em;
+    font-size: 1em;
     box-sizing: border-box;
     resize: none;
     width: 100%; /* 横幅をフッター全体に合わせる */
@@ -145,6 +145,27 @@ html, body {
     box-sizing: border-box;
 }
 
+/* EasyMDEツールバーのカスタムCSS */
+.easyMDEContainer .editor-toolbar {
+    height: 25px; /* ツールバーの全体的な高さを調整 */
+    padding: 0; /* パディングを取り除く */
+}
+
+.easyMDEContainer .editor-toolbar a {
+    padding: 0px 0px; /* 各アイコンのパディングを調整 */
+    margin: 0 0px; /* アイコン間のスペースを縮小 */
+}
+
+.easyMDEContainer .editor-toolbar button {
+    height: 15px; /* 各ボタンの高さを縮小 */
+    line-height: 15px; /* ボタン内のアイコン位置を中央揃えにする */
+}
+
+.easyMDEContainer .editor-toolbar a svg {
+    width: 15px; /* アイコンの幅を縮小 */
+    height: 15px; /* アイコンの高さを縮小 */
+}
+
 /* エディタ部分 (CodeMirror) の高さ調整 */
 .CodeMirror {
     max-height: 100%; /* フッターの高さに応じて100%に */
@@ -153,27 +174,4 @@ html, body {
     box-sizing: border-box;
     padding-right: 10px; /* スクロールバーとテキストの間に余白 */
 }
-/* ツールバーとステータスバーの高さ調整 */
-.editor-toolbar, .editor-statusbar {
-    width: 100% !important; /* 横幅を100%に合わせる */
-}
 
-/* Add Entry ボタン */
-.add-button {
-    position: absolute;
-    right: 20px;
-    bottom: 20px;
-    padding: 6px 10px;
-    font-size: 0.9em;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    z-index: 2;
-}
-
-.add-button:hover {
-    background-color: #0056b3;
-}

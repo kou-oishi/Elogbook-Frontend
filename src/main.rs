@@ -2,65 +2,19 @@
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use yew::prelude::*;
-use gloo_net::http::{Request};
-use gloo_timers::callback::Timeout; // gloo_timersからTimeoutをインポート
+use gloo_net::http::{Request, Response};
+use gloo_timers::callback::Timeout; 
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlElement};
+use web_sys::{HtmlElement, FormData};
 use anyhow::Error;
-use chrono::{DateTime, Local};
-use serde::{Deserialize};
-use serde_json::json; // JSONエンコード用にserde_jsonをインポート
+use chrono::Local;
 use pulldown_cmark::{Parser, html};
 use yew::virtual_dom::VNode;
 
-// Convert markdown to html
-fn markdown_to_html(content: &str) -> Html {
-    let parser = Parser::new(content);
-    let mut html_output = String::new();
-    html::push_html(&mut html_output, parser);
-
-    // HTML文字列をDOMノードに変換し、YewのVNodeとして返す
-    let document = web_sys::window().unwrap().document().unwrap();
-    let div = document.create_element("div").unwrap();
-    div.set_inner_html(&html_output);
-    VNode::VRef(div.into())
-}
-
-// From the backend 
-#[derive(Debug, Deserialize)]  // Deserializeを追加
-struct EntryResponse {
-    id: String,           
-    content: String,      
-    created_at: String,   
-}
-impl EntryResponse {
-    fn to_entry(self) -> Option<Entry> {
-        if let Ok(datetime) = DateTime::parse_from_rfc3339(&self.created_at) {
-            Some(Entry {
-                id: self.id,
-                log: self.content,
-                timestamp: datetime.with_timezone(&Local),
-            })
-        } else {
-            None
-        }
-    }
-}
-
-
-pub struct Entry {
-    id: String,
-    log: String,
-    timestamp: DateTime<Local>,
-}
-impl Entry {
-    fn new(id:String, log:String, timestamp:DateTime<Local>) -> Self {
-        Self{id:id, log:log, timestamp:timestamp}
-    }
-}
+mod models;
+use models::*;
 
 pub struct Model {
-    entry:   String,
     entries: Vec<Entry>,
     limit:   i64,
     offset:  i64,
@@ -92,8 +46,7 @@ impl Model {
 }
 
 pub enum Msg {
-    UpdateEntry(String),
-    AddEntry,
+    AddEntry(String),
     GetEntries(i64, i64),
     LoadMoreEntries,
     ReceiveResponse(Result<Vec<Entry>, Error>),
@@ -110,7 +63,6 @@ impl Component for Model {
         let link = ctx.link().clone();
         link.send_message(Msg::GetEntries(default_limit, 0));
         let instance = Self {
-            entry: String::new(),
             entries: vec![],
             limit: default_limit,
             offset: 0,
@@ -126,38 +78,43 @@ impl Component for Model {
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::UpdateEntry(val) => {
-                self.entry = val;
-                true
-            }
 
-            Msg::AddEntry => {
+            Msg::AddEntry(content) => {
                 let link = ctx.link().clone();
-                if self.entry.is_empty() {
+                if content.is_empty() {
                     link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Entry is empty"))));
                     return false;
                 }
-                let entry_content = self.entry.clone();
-                let body = json!({"content": entry_content}).to_string(); // can contain \n
+                let form_data = FormData::new().unwrap();
+                form_data.append_with_str("content", &content).unwrap();
 
                 spawn_local(async move {
-                    if let Ok(response) = Request::post("http://127.0.0.1:8080/add_entry")
-                        .header("Content-Type", "application/json")
-                        .body(body)
-                        .send()
-                        .await
-                    {
-                        if response.ok() {
-                            //link.send_message(Msg::GetEntries(limit, offset));
-                            link.send_message(Msg::GetEntries(1, 0));
-                        } else {
-                            link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Request failed"))));
+                    let request_init = web_sys::RequestInit::new();
+                    request_init.set_method("POST");
+                    request_init.set_body(&JsValue::from(form_data));
+
+                    let request = web_sys::Request::new_with_str_and_init(
+                        "http://127.0.0.1:8080/add_entry", 
+                        &request_init,
+                    ).unwrap();
+
+                    let window = web_sys::window().unwrap();
+                    let fetch_promise = window.fetch_with_request(&request);
+
+                    match wasm_bindgen_futures::JsFuture::from(fetch_promise).await {
+                        Ok(response) => {
+                            let response: web_sys::Response = response.dyn_into().unwrap();
+                            if response.ok() {
+                                link.send_message(Msg::GetEntries(1, 0));
+                            } else {
+                                link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Request failed."))));
+                            }
                         }
-                    } else {
-                        link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Request failed."))));
+                        Err(err) => {
+                            link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!(format!("Request failed: {:?}", err)))));
+                        }
                     }
                 });
-                self.entry.clear();
                 true
             }
 
@@ -306,7 +263,7 @@ impl Component for Model {
                 <div class="resize-divider"></div>
                 <footer class="footer">
                     <textarea
-                        value={self.entry.clone()}
+                        value=""
                         class="input-box"
                         placeholder="Enter text here..."
                     />
@@ -317,28 +274,37 @@ impl Component for Model {
     
 }
 
-
-
 // JavaScript用の関数を登録する
 fn register_update_and_add_entry_callback(link: yew::html::Scope<Model>) {
     // クロージャを作成してJavaScript側に公開
     let callback = Closure::wrap(Box::new(move |content: String| {
-        link.send_message(Msg::UpdateEntry(content.clone())); // UpdateEntryを送信
-        link.send_message(Msg::AddEntry); // AddEntryを送信
+        link.send_message(Msg::AddEntry(content.clone())); // AddEntryを送信
     }) as Box<dyn Fn(String)>);
 
     // JavaScript からこのクロージャを呼び出せるように、`send_update_and_add_entry` として登録
     let global = js_sys::global();
     js_sys::Reflect::set(
         &global,
-        &JsValue::from_str("send_update_and_add_entry"),
+        &JsValue::from_str("send_add_entry"),
         callback.as_ref().unchecked_ref(),
     )
-    .expect("Failed to register `send_update_and_add_entry`");
+    .expect("Failed to register `send_add_entry`");
 
     callback.forget(); // メモリ解放を防ぐため、忘却する
 }
 
+// Convert markdown to html
+fn markdown_to_html(content: &str) -> Html {
+    let parser = Parser::new(content);
+    let mut html_output = String::new();
+    html::push_html(&mut html_output, parser);
+
+    // HTML文字列をDOMノードに変換し、YewのVNodeとして返す
+    let document = web_sys::window().unwrap().document().unwrap();
+    let div = document.create_element("div").unwrap();
+    div.set_inner_html(&html_output);
+    VNode::VRef(div.into())
+}
 
 fn main() {
     yew::Renderer::<Model>::new().render();
