@@ -24,7 +24,8 @@ function initializeMarkdownEditor(textarea, footer) {
         ],
         autoDownloadFontAwesome: true,
         status: false,
-        previewClass: ["editor-preview"]
+        previewClass: ["editor-preview"],
+        spellChecker: false
     });
     
     // Ctrl+Enterでエントリー追加

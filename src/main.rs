@@ -1,8 +1,6 @@
-// Rustコード (main.rs)
-
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use yew::prelude::*;
-use gloo_net::http::{Request, Response};
+use gloo_net::http::Request;
 use gloo_timers::callback::Timeout; 
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{HtmlElement, FormData};
@@ -23,7 +21,6 @@ pub struct Model {
 }
 
 impl Model {
-    
     // レンダー完了後にスクロール位置を設定する関数
     fn scroll_to_position(&self, offset: i32, from_bottom: bool, waiting_time: u32) {
         let content_ref = self.content_ref.clone();
@@ -45,6 +42,7 @@ impl Model {
     
 }
 
+// Message handlers for the model
 pub enum Msg {
     AddEntry(String),
     GetEntries(i64, i64),
@@ -57,6 +55,9 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /// create
+    /////////////////////////////////////////////////////////////////////////////////////////////
     fn create(ctx: &Context<Self>) -> Self {
         let default_limit = 20;
 
@@ -71,20 +72,27 @@ impl Component for Model {
         };
 
         // JavaScript側でアクセスできるように関数を登録
-        register_update_and_add_entry_callback(ctx.link().clone());
+        register_entry_callback(ctx.link().clone());
 
         instance
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /// update
+    /////////////////////////////////////////////////////////////////////////////////////////////
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
 
+            // ---------------------------------------------------------------------------
+            // Message: AddEntry
+            // ---------------------------------------------------------------------------
             Msg::AddEntry(content) => {
                 let link = ctx.link().clone();
                 if content.is_empty() {
                     link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Entry is empty"))));
                     return false;
                 }
+
                 let form_data = FormData::new().unwrap();
                 form_data.append_with_str("content", &content).unwrap();
 
@@ -118,6 +126,9 @@ impl Component for Model {
                 true
             }
 
+            // ---------------------------------------------------------------------------
+            // Message: GetEntries
+            // ---------------------------------------------------------------------------
             Msg::GetEntries(limit, offset) => {
                 let link = ctx.link().clone();
                 self.loading = true;
@@ -151,6 +162,9 @@ impl Component for Model {
                 false
             }
             
+            // ---------------------------------------------------------------------------
+            // ReceiveLatestEntry
+            // ---------------------------------------------------------------------------
             Msg::ReceiveLatestEntry(new_entry) => {
                 // 新しいエントリーをリストの先頭に追加
                 self.entries.push(new_entry);
@@ -159,10 +173,12 @@ impl Component for Model {
 
                 // Force to scroll down
                 self.scroll_to_position(0, true, 50);
-
                 true
             }            
             
+            // ---------------------------------------------------------------------------
+            // Message: LoadMoreEntries
+            // ---------------------------------------------------------------------------
             Msg::LoadMoreEntries => {
                 if ! self.loading {
                     ctx.link().send_message(Msg::GetEntries(self.limit, self.offset));
@@ -170,6 +186,9 @@ impl Component for Model {
                 false
             }   
 
+            // ---------------------------------------------------------------------------
+            // Message: ReceiveResponse
+            // ---------------------------------------------------------------------------
             Msg::ReceiveResponse(response) => {
                 match response {
 
@@ -192,6 +211,9 @@ impl Component for Model {
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /// rendered
+    /////////////////////////////////////////////////////////////////////////////////////////////
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {            
             // Force to scroll down
@@ -221,7 +243,10 @@ impl Component for Model {
         }
     }
 
-    fn view(&self, ctx: &Context<Self>) -> Html {
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /// view
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         let mut last_date = None;
     
         html! {
@@ -233,7 +258,7 @@ impl Component for Model {
                     <ul class="entries-list">
                         {
                             for self.entries.iter().map(|entry| {
-                                let entry_date = entry.timestamp.with_timezone(&Local).date();
+                                let entry_date = entry.timestamp.with_timezone(&Local).date_naive();
                                 let show_date = match last_date {
                                     Some(last) if last == entry_date => false,
                                     _ => {
@@ -274,14 +299,13 @@ impl Component for Model {
     
 }
 
-// JavaScript用の関数を登録する
-fn register_update_and_add_entry_callback(link: yew::html::Scope<Model>) {
+// Interface to Java Script
+fn register_entry_callback(link: yew::html::Scope<Model>) {
     // クロージャを作成してJavaScript側に公開
     let callback = Closure::wrap(Box::new(move |content: String| {
-        link.send_message(Msg::AddEntry(content.clone())); // AddEntryを送信
+        link.send_message(Msg::AddEntry(content.clone())); // Send AddEntry
     }) as Box<dyn Fn(String)>);
 
-    // JavaScript からこのクロージャを呼び出せるように、`send_update_and_add_entry` として登録
     let global = js_sys::global();
     js_sys::Reflect::set(
         &global,
@@ -290,7 +314,7 @@ fn register_update_and_add_entry_callback(link: yew::html::Scope<Model>) {
     )
     .expect("Failed to register `send_add_entry`");
 
-    callback.forget(); // メモリ解放を防ぐため、忘却する
+    callback.forget(); 
 }
 
 // Convert markdown to html
