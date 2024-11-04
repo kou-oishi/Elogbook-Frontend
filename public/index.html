@@ -5,16 +5,28 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Elogbook</title>
-
+    <!-- PDF preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script>
+        // PDF.js worker setting
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+        // CMap global setting
+        pdfjsLib.GlobalCMapOptions = {
+            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/cmaps/',
+            cMapPacked: true
+        };
+    </script>
     <!-- EasyMDE -->
     <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 </head>
+
 <body>
     <div id="root"></div>
     <script type="module">
@@ -24,4 +36,5 @@
     <script src="resize.js" defer></script>
     <script src="textarea.js" defer></script>
 </body>
+
 </html>

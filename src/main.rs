@@ -1,21 +1,21 @@
-use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use yew::prelude::*;
-use gloo_net::http::Request;
-use gloo_timers::callback::Timeout; 
-use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlElement, FormData};
 use anyhow::Error;
 use chrono::Local;
-use pulldown_cmark::{Parser, html};
+use gloo_net::http::Request;
+use gloo_timers::callback::Timeout;
+use pulldown_cmark::{html, Parser};
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{FormData, HtmlElement};
+use yew::prelude::*;
 use yew::virtual_dom::VNode;
 
 mod models;
 use models::*;
 
-pub struct Model { 
+pub struct Model {
     entries: Vec<Entry>,
-    limit:   i64,
-    offset:  i64,
+    limit: i64,
+    offset: i64,
     loading: bool,
     content_ref: NodeRef, // NodeRef追加
 }
@@ -39,7 +39,6 @@ impl Model {
         })
         .forget(); // コールバックを忘却
     }
-    
 }
 
 // Message handlers for the model
@@ -48,7 +47,7 @@ pub enum Msg {
     GetEntries(i64, i64),
     LoadMoreEntries,
     ReceiveResponse(Result<Vec<Entry>, Error>),
-    ReceiveLatestEntry(Entry)
+    ReceiveLatestEntry(Entry),
 }
 
 impl Component for Model {
@@ -82,7 +81,6 @@ impl Component for Model {
     /////////////////////////////////////////////////////////////////////////////////////////////
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-
             // ---------------------------------------------------------------------------
             // Message: AddEntry
             // ---------------------------------------------------------------------------
@@ -98,7 +96,9 @@ impl Component for Model {
                 form_data.append_with_str("content", &content).unwrap();
                 // Attachments
                 for file in attachments {
-                    form_data.append_with_blob_and_filename("file", &file, &file.name()).unwrap();
+                    form_data
+                        .append_with_blob_and_filename("file", &file, &file.name())
+                        .unwrap();
                 }
 
                 spawn_local(async move {
@@ -107,9 +107,10 @@ impl Component for Model {
                     request_init.set_body(&JsValue::from(form_data));
 
                     let request = web_sys::Request::new_with_str_and_init(
-                        "http://127.0.0.1:8080/add_entry", 
+                        "http://127.0.0.1:8080/add_entry",
                         &request_init,
-                    ).unwrap();
+                    )
+                    .unwrap();
 
                     let window = web_sys::window().unwrap();
                     let fetch_promise = window.fetch_with_request(&request);
@@ -120,11 +121,16 @@ impl Component for Model {
                             if response.ok() {
                                 link.send_message(Msg::GetEntries(1, 0));
                             } else {
-                                link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Request failed."))));
+                                link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!(
+                                    "Request failed."
+                                ))));
                             }
                         }
                         Err(err) => {
-                            link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!(format!("Request failed: {:?}", err)))));
+                            link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!(format!(
+                                "Request failed: {:?}",
+                                err
+                            )))));
                         }
                     }
                 });
@@ -139,16 +145,19 @@ impl Component for Model {
                 self.loading = true;
 
                 spawn_local(async move {
-                    if let Ok(response) = Request::get(&format!("http://127.0.0.1:8080/get_entries?limit={}&offset={}", limit, offset))
-                        .send()
-                        .await
+                    if let Ok(response) = Request::get(&format!(
+                        "http://127.0.0.1:8080/get_entries?limit={}&offset={}",
+                        limit, offset
+                    ))
+                    .send()
+                    .await
                     {
                         if let Ok(json) = response.json::<Vec<EntryResponse>>().await {
-                            let entries: Vec<Entry> = 
-                                json.into_iter().filter_map(|entry_response| {
-                                    entry_response.to_entry()
-                                }).collect();
-                            
+                            let entries: Vec<Entry> = json
+                                .into_iter()
+                                .filter_map(|entry_response| entry_response.to_entry())
+                                .collect();
+
                             // Only taking the newly entered entry
                             if limit == 1 && offset == 0 {
                                 if let Some(new_entry) = entries.into_iter().next() {
@@ -158,15 +167,19 @@ impl Component for Model {
                                 link.send_message(Msg::ReceiveResponse(Ok(entries)));
                             }
                         } else {
-                            link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Failed to parse request as text"))));
+                            link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!(
+                                "Failed to parse request as text"
+                            ))));
                         }
                     } else {
-                        link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Request failed."))));
+                        link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!(
+                            "Request failed."
+                        ))));
                     }
                 });
                 false
             }
-            
+
             // ---------------------------------------------------------------------------
             // ReceiveLatestEntry
             // ---------------------------------------------------------------------------
@@ -179,30 +192,32 @@ impl Component for Model {
                 // Force to scroll down
                 self.scroll_to_position(0, true, 50);
                 true
-            }            
-            
+            }
+
             // ---------------------------------------------------------------------------
             // Message: LoadMoreEntries
             // ---------------------------------------------------------------------------
             Msg::LoadMoreEntries => {
-                if ! self.loading {
-                    ctx.link().send_message(Msg::GetEntries(self.limit, self.offset));
+                if !self.loading {
+                    ctx.link()
+                        .send_message(Msg::GetEntries(self.limit, self.offset));
                 }
                 false
-            }   
+            }
 
             // ---------------------------------------------------------------------------
             // Message: ReceiveResponse
             // ---------------------------------------------------------------------------
             Msg::ReceiveResponse(response) => {
                 match response {
-
                     Ok(entries) => {
                         // Add the loaded entried
                         self.offset += entries.len() as i64;
-                        entries.into_iter().for_each(|entry| self.entries.insert(0, entry));
+                        entries
+                            .into_iter()
+                            .for_each(|entry| self.entries.insert(0, entry));
                         self.loading = false;
-                        
+
                         self.scroll_to_position(10, false, 50);
 
                         true
@@ -220,7 +235,7 @@ impl Component for Model {
     /// rendered
     /////////////////////////////////////////////////////////////////////////////////////////////
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
-        if first_render {            
+        if first_render {
             // Force to scroll down
             self.scroll_to_position(0, true, 300);
 
@@ -244,7 +259,6 @@ impl Component for Model {
 
             // イベントハンドラを保持
             callback.forget();
-
         }
     }
 
@@ -253,7 +267,7 @@ impl Component for Model {
     /////////////////////////////////////////////////////////////////////////////////////////////
     fn view(&self, _ctx: &Context<Self>) -> Html {
         let mut last_date = None;
-    
+
         html! {
             <div class="container">
                 <header class="header">
@@ -290,6 +304,7 @@ impl Component for Model {
                         }
                     </ul>
                 </div>
+                <div id="file-previews" class="file-previews"></div>
                 <div class="resize-divider"></div>
                 <footer class="footer">
                     <textarea
@@ -300,8 +315,7 @@ impl Component for Model {
                 </footer>
             </div>
         }
-    }    
-    
+    }
 }
 
 // Interface to Java Script
@@ -310,10 +324,11 @@ fn register_entry_callback(link: yew::html::Scope<Model>) {
     let callback = Closure::wrap(Box::new(move |content: JsValue, array: JsValue| {
         let content_str = content.as_string().unwrap_or_default();
         let files = js_sys::Array::from(&array);
-        let attachments: Vec<web_sys::File> = files.iter().map(|f| 
-            f.dyn_into::<web_sys::File>().unwrap()
-        ).collect();
-        
+        let attachments: Vec<web_sys::File> = files
+            .iter()
+            .map(|f| f.dyn_into::<web_sys::File>().unwrap())
+            .collect();
+
         link.send_message(Msg::AddEntry(content_str.clone(), attachments)); // Send AddEntry
     }) as Box<dyn Fn(JsValue, JsValue)>);
 
@@ -325,7 +340,7 @@ fn register_entry_callback(link: yew::html::Scope<Model>) {
     )
     .expect("Failed to register `send_add_entry`");
 
-    callback.forget(); 
+    callback.forget();
 }
 
 // Convert markdown to html
