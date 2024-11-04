@@ -14,7 +14,14 @@ function initializeMarkdownEditor(textarea, footer) {
         element: textarea,
         minHeight: "25px",
         toolbar: [
-            "bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "preview", "|",
+            "bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|",
+            {
+                name: "attachFile",
+                action: function () { attachFile(); },
+                className: "fa fa-file",
+                title: "Attach Files"
+            },
+            "|", "preview", "|",
             {
                 name: "addEntry",
                 action: function () { addEntry(easymde); },
@@ -64,11 +71,36 @@ function initializeMarkdownEditor(textarea, footer) {
     easymde.codemirror.getWrapperElement().style.lineHeight = "1"; // 行間を設定
 }
 
+// Attach a file
+let fileList = []; // File list
+function attachFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true; 
+
+    input.onchange = function (event) {
+        const newFiles = Array.from(event.target.files);
+        fileList = fileList.concat(newFiles);
+    };
+
+    input.click(); // ファイル選択ダイアログを表示
+}
+
 // Add Entry関数
 function addEntry(easymde) {
     const markdownContent = easymde.value();
-    window.send_add_entry(markdownContent); // Rust側に送信
-    easymde.value(""); // エディタをクリア
+
+    // Attachments if exist
+    let files = [];
+    if(fileList) {
+        files = fileList;
+    }
+
+    // Send to the Rust side
+    window.send_add_entry(markdownContent, files);
+    // Clear
+    easymde.value("");
+    fileList = [];
 }
 
 // ページの読み込み完了後にMarkdownエディタを初期化

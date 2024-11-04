@@ -12,7 +12,7 @@ use yew::virtual_dom::VNode;
 mod models;
 use models::*;
 
-pub struct Model {
+pub struct Model { 
     entries: Vec<Entry>,
     limit:   i64,
     offset:  i64,
@@ -44,7 +44,7 @@ impl Model {
 
 // Message handlers for the model
 pub enum Msg {
-    AddEntry(String),
+    AddEntry(String, Vec<web_sys::File>),
     GetEntries(i64, i64),
     LoadMoreEntries,
     ReceiveResponse(Result<Vec<Entry>, Error>),
@@ -86,15 +86,20 @@ impl Component for Model {
             // ---------------------------------------------------------------------------
             // Message: AddEntry
             // ---------------------------------------------------------------------------
-            Msg::AddEntry(content) => {
+            Msg::AddEntry(content, attachments) => {
                 let link = ctx.link().clone();
-                if content.is_empty() {
-                    link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Entry is empty"))));
+                if content.is_empty() && attachments.is_empty() {
+                    link.send_message(Msg::ReceiveResponse(Err(anyhow::anyhow!("Empty entry"))));
                     return false;
                 }
-
+                // Compile the data into fromdata
                 let form_data = FormData::new().unwrap();
+                // Content
                 form_data.append_with_str("content", &content).unwrap();
+                // Attachments
+                for file in attachments {
+                    form_data.append_with_blob_and_filename("file", &file, &file.name()).unwrap();
+                }
 
                 spawn_local(async move {
                     let request_init = web_sys::RequestInit::new();
@@ -302,9 +307,15 @@ impl Component for Model {
 // Interface to Java Script
 fn register_entry_callback(link: yew::html::Scope<Model>) {
     // クロージャを作成してJavaScript側に公開
-    let callback = Closure::wrap(Box::new(move |content: String| {
-        link.send_message(Msg::AddEntry(content.clone())); // Send AddEntry
-    }) as Box<dyn Fn(String)>);
+    let callback = Closure::wrap(Box::new(move |content: JsValue, array: JsValue| {
+        let content_str = content.as_string().unwrap_or_default();
+        let files = js_sys::Array::from(&array);
+        let attachments: Vec<web_sys::File> = files.iter().map(|f| 
+            f.dyn_into::<web_sys::File>().unwrap()
+        ).collect();
+        
+        link.send_message(Msg::AddEntry(content_str.clone(), attachments)); // Send AddEntry
+    }) as Box<dyn Fn(JsValue, JsValue)>);
 
     let global = js_sys::global();
     js_sys::Reflect::set(

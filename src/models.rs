@@ -8,6 +8,7 @@ pub struct Attachment {
     pub id: u32,
     pub saved_path: String,
     pub original_name: String,
+    pub mime: String,
 }
 pub type Attachments = Vec<Attachment>;
 
@@ -33,7 +34,7 @@ impl EntryResponse {
     }
 }
 
-
+#[derive(Debug)] 
 pub struct Entry {
     pub id: String,
     pub log: String,
