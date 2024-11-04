@@ -2,15 +2,16 @@ use anyhow::Error;
 use chrono::Local;
 use gloo_net::http::Request;
 use gloo_timers::callback::Timeout;
-use pulldown_cmark::{html, Parser};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{FormData, HtmlElement};
 use yew::prelude::*;
-use yew::virtual_dom::VNode;
 
 mod models;
 use models::*;
+
+mod render;
+use render::*;
 
 pub struct Model {
     entries: Vec<Entry>,
@@ -341,19 +342,6 @@ fn register_entry_callback(link: yew::html::Scope<Model>) {
     .expect("Failed to register `send_add_entry`");
 
     callback.forget();
-}
-
-// Convert markdown to html
-fn markdown_to_html(content: &str) -> Html {
-    let parser = Parser::new(content);
-    let mut html_output = String::new();
-    html::push_html(&mut html_output, parser);
-
-    // HTML文字列をDOMノードに変換し、YewのVNodeとして返す
-    let document = web_sys::window().unwrap().document().unwrap();
-    let div = document.create_element("div").unwrap();
-    div.set_inner_html(&html_output);
-    VNode::VRef(div.into())
 }
 
 fn main() {

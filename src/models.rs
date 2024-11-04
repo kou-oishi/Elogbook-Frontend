@@ -1,23 +1,22 @@
-
 use chrono::{DateTime, Local};
 use serde::Deserialize;
 
-// From the backend 
+// From the backend
 #[derive(Debug, Deserialize)]
 pub struct Attachment {
     pub id: u32,
-    pub saved_path: String,
-    pub original_name: String,
     pub mime: String,
+    pub download_url: String,
+    pub original_name: String,
 }
 pub type Attachments = Vec<Attachment>;
 
-#[derive(Debug, Deserialize)]  // Deserializeを追加
+#[derive(Debug, Deserialize)] // Deserializeを追加
 pub struct EntryResponse {
-    pub id: String,           
-    pub content: String,      
+    pub id: String,
+    pub content: String,
     pub created_at: String,
-    pub attachments: Option<Attachments>,
+    pub attachments: Attachments,
 }
 impl EntryResponse {
     pub fn to_entry(self) -> Option<Entry> {
@@ -26,7 +25,7 @@ impl EntryResponse {
                 id: self.id,
                 log: self.content,
                 timestamp: datetime.with_timezone(&Local),
-                attachments: self.attachments.unwrap_or_else(Vec::new),
+                attachments: self.attachments,
             })
         } else {
             None
@@ -34,7 +33,7 @@ impl EntryResponse {
     }
 }
 
-#[derive(Debug)] 
+#[derive(Debug)]
 pub struct Entry {
     pub id: String,
     pub log: String,
@@ -42,8 +41,17 @@ pub struct Entry {
     pub attachments: Attachments,
 }
 impl Entry {
-    pub fn new(id:String, log:String, timestamp:DateTime<Local>, attachments: Attachments) -> Self {
-        Self{id:id, log:log, timestamp:timestamp, attachments:attachments}
+    pub fn new(
+        id: String,
+        log: String,
+        timestamp: DateTime<Local>,
+        attachments: Attachments,
+    ) -> Self {
+        Self {
+            id: id,
+            log: log,
+            timestamp: timestamp,
+            attachments: attachments,
+        }
     }
 }
-

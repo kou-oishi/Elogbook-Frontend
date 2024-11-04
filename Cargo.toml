@@ -16,3 +16,4 @@ web-sys = { version = "0.3", features = ["MutationObserver", "MutationObserverIn
 chrono = "0.4"
 js-sys = "0.3"  
 pulldown-cmark = "0.9"
+html-escape = "0.2"  
