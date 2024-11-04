@@ -18,6 +18,14 @@ function resizePreviewItems() {
 
     previews.forEach(preview => {
         preview.style.height = `${previewHeight}px`;
+
+        // The icon size if applicable
+        const thumbnailSpan = preview.querySelector(".thumbnail-span");
+        const icon = thumbnailSpan ? thumbnailSpan.querySelector(".preview-icon") : null;
+        if (icon) {
+            const spanHeight = thumbnailSpan.clientHeight;
+            icon.style.fontSize = `${spanHeight}px`;
+        }
     });
 }
 

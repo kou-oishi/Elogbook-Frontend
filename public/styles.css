@@ -254,6 +254,11 @@ body {
     border-radius: 4px;
 }
 
+.preview-icon {
+    max-height: 100%;
+    max-width: 100%;
+}
+
 /* ファイル情報用のspan */
 .file-info {
     flex-basis: 70%;

@@ -101,13 +101,21 @@ async function showFilePreview(file, fileNumber) {
         img.src = thumbnailUrl;
         img.classList.add("preview-image");
         thumbnailSpan.appendChild(img);
-    } else if (file.type === "text/plain") {
-        // テキストファイルの場合、Material Iconを表示
-        thumbnailSpan.innerHTML = '<i class="material-icons preview-icon">description</i>';
     } else {
-        // 不明なファイルの場合、汎用アイコンを表示
-        thumbnailSpan.innerHTML = '<i class="material-icons preview-icon">insert_drive_file</i>';
+        // Icons (see. https://fonts.google.com/icons)
+        iconName = 'insert_drive_file'; // Unknown case
+        // Choices
+        if (file.type === "text/plain") iconName = 'descprition';
+        else if (file.type === "text/html") iconName = 'html';
+        else if (file.type === "text/xml") iconName = 'xml';
+        else if (file.type === "text/javascript") iconName = 'javascript';
+        else if (file.type.includes("json")) iconName = 'file_json';
+        else if (file.type.includes("zip")) iconName = 'folder_zip';
+        // Set
+        thumbnailSpan.innerHTML = '<i class="material-icons preview-icon">' + iconName + '</i>';
     }
+
+
 
     previewDiv.appendChild(closeButton); // 「×」ボタンをプレビューに追加
     previewDiv.appendChild(thumbnailSpan); // サムネイル追加
