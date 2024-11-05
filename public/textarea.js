@@ -13,7 +13,8 @@ function waitForMarkdownElements() {
         window.textarea) {
         initializeMarkdownEditor();
     } else {
-        setTimeout(waitForMarkdownElements, 100); // 必要な要素が見つかるまで再試行
+        // Loop until all the elements found
+        setTimeout(waitForMarkdownElements, 100);
     }
 }
 
@@ -45,7 +46,7 @@ function initializeMarkdownEditor() {
         spellChecker: false
     });
 
-    // Ctrl+Enterでエントリー追加
+    // Ctrl+Enter short cut
     window.easyMDE.codemirror.on("keydown", function (instance, event) {
         if (event.ctrlKey && event.key === "Enter") {
             event.preventDefault();
@@ -53,18 +54,18 @@ function initializeMarkdownEditor() {
         }
     });
 
-    // Add Entryボタンの隣に「Add Entry」テキストを追加
+    // Custom the submit button
     const addEntryButton = document.querySelector(".fa-paper-plane");
     if (addEntryButton) {
         const addEntryText = document.createElement("span");
         addEntryText.textContent = "Submit (Ctrl+Enter)";
-        addEntryText.style.marginLeft = "5px"; // アイコンとテキストの間に余白
+        addEntryText.style.marginLeft = "5px";
         addEntryButton.parentNode.appendChild(addEntryText);
     }
 
-    // エディタ内のスタイルを設定
-    window.easyMDE.codemirror.getWrapperElement().style.fontSize = "12px"; // 文字サイズを14pxに設定
-    window.easyMDE.codemirror.getWrapperElement().style.lineHeight = "1"; // 行間を設定
+    // Editor style
+    window.easyMDE.codemirror.getWrapperElement().style.fontSize = "12px";
+    window.easyMDE.codemirror.getWrapperElement().style.lineHeight = "1";
 }
 
 
@@ -74,22 +75,21 @@ async function showFilePreview(file, fileNumber) {
     const previewDiv = document.createElement("div");
     previewDiv.classList.add("file-preview");
 
-    // サムネイル用のspan
+    // Span for thumbnail or icon
     const thumbnailSpan = document.createElement("span");
     thumbnailSpan.classList.add("thumbnail-span");
 
-    // 「×」ボタン
+    // Close button
     const closeButton = document.createElement("button");
     closeButton.textContent = "×";
     closeButton.classList.add("close-button");
 
-    // ボタンのクリックイベントでファイルを削除
     closeButton.onclick = () => {
-        fileList = fileList.filter(f => f !== file); // fileListからファイルを削除
-        updateFilePreviews(); // プレビューを再描画
+        fileList = fileList.filter(f => f !== file);
+        updateFilePreviews();
     };
 
-    // 画像とPDFのサムネイル生成
+    // Images, PDF, or Icons
     if (file.type.startsWith("image/")) {
         const img = document.createElement("img");
         img.src = URL.createObjectURL(file);
@@ -103,24 +103,23 @@ async function showFilePreview(file, fileNumber) {
         thumbnailSpan.appendChild(img);
     } else {
         // Icons (see. https://fonts.google.com/icons)
-        iconName = 'insert_drive_file'; // Unknown case
+        iconName = 'insert_drive_file'; // Default icon for unknown file types
         // Choices
-        if (file.type === "text/plain") iconName = 'descprition';
+        if (file.type === "text/plain") iconName = 'description';
         else if (file.type === "text/html") iconName = 'html';
-        else if (file.type === "text/xml") iconName = 'xml';
         else if (file.type === "text/javascript") iconName = 'javascript';
-        else if (file.type.includes("json")) iconName = 'file_json';
+        else if (file.type.includes("css")) iconName = 'css';
+        else if (file.type.startsWith("text/")) iconName = 'code';
+        else if (file.type.includes("json")) iconName = 'html';
         else if (file.type.includes("zip")) iconName = 'folder_zip';
-        // Set
-        thumbnailSpan.innerHTML = '<i class="material-icons preview-icon">' + iconName + '</i>';
+        // Set HTML
+        thumbnailSpan.innerHTML = '<i class="material-symbols-outlined preview-icon">' + iconName + '</i>';
     }
 
+    previewDiv.appendChild(closeButton);
+    previewDiv.appendChild(thumbnailSpan);
 
-
-    previewDiv.appendChild(closeButton); // 「×」ボタンをプレビューに追加
-    previewDiv.appendChild(thumbnailSpan); // サムネイル追加
-
-    // ファイル情報用のspan
+    // File information
     const fileInfoSpan = document.createElement("span");
     fileInfoSpan.classList.add("file-info");
 
@@ -144,7 +143,7 @@ async function generatePDFThumbnail(file) {
     const pdf = await pdfjsLib.getDocument({
         data: pdfData,
         cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/cmaps/',
-        cMapPacked: true // 圧縮されたCMapファイルを使用
+        cMapPacked: true
     }).promise;
     const page = await pdf.getPage(1); // The first page
 
@@ -155,7 +154,7 @@ async function generatePDFThumbnail(file) {
 
     const context = canvas.getContext("2d", { willReadFrequently: true });
     await page.render({ canvasContext: context, viewport: viewport }).promise;
-    return canvas.toDataURL("image/png"); // 画像データURLを返す
+    return canvas.toDataURL("image/png");
 }
 
 // File list
