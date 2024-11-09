@@ -212,16 +212,20 @@ impl Component for Model {
             Msg::ReceiveResponse(response) => {
                 match response {
                     Ok(entries) => {
-                        // Add the loaded entried
-                        self.offset += entries.len() as i64;
-                        entries
-                            .into_iter()
-                            .for_each(|entry| self.entries.insert(0, entry));
-                        self.loading = false;
+                        let mut ret = false; // in case no entries loaded newly
 
+                        if !entries.is_empty() {
+                            // Add the loaded entried
+                            self.offset += entries.len() as i64;
+                            entries
+                                .into_iter()
+                                .for_each(|entry| self.entries.insert(0, entry));
+                            ret = true;
+                        }
+                        self.loading = false;
                         self.scroll_to_position(10, false, 50);
 
-                        true
+                        ret
                     }
                     Err(err) => {
                         web_sys::console::log_1(&format!("Error! {:?}", err).into());
@@ -289,9 +293,8 @@ impl Component for Model {
                                 html! {
                                     <>
                                         if show_date {
-                                            <li class="entry-date">
-                                                { entry_date.format("%Y-%m-%d").to_string() }
-                                            </li>
+                                            <div class="entry-date">{ entry_date.format("%Y-%m-%d").to_string() }</div>
+                                            <div class="entry-date-boader"/>
                                         }
                                         <li class="entry-item">
                                             <span class="timestamp">
