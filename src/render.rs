@@ -71,6 +71,13 @@ fn expand_attachment_html(attachment: &Attachment) -> String {
                 attachment.id
             )
         }
+        "application/pdf" => {
+            format!(
+                "<div class='pdf-attachment' data-url='{}' data-id='{}'>Loading PDF preview...</div>",
+                path,
+                attachment.id
+            )
+        }
         "text/plain" => {
             format!(
                 "<div class='text-attachment' data-url='{}' data-id='{}'>Loading preview...</div>",
