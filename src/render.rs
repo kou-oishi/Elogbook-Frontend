@@ -60,28 +60,31 @@ fn parse_log_text(log_text: &str, attachments: &[Attachment]) -> String {
 fn expand_attachment_html(attachment: &Attachment) -> String {
     use html_escape::encode_text;
 
-    let path = format!("http://127.0.0.1:8080/{}", attachment.download_url);
+    let path = format!(
+        "http://127.0.0.1:8080/download/{}",
+        attachment.download_token
+    );
 
     match attachment.mime.as_str() {
         "image/png" | "image/jpeg" | "image/gif" => {
             format!(
-                "<img src='{}' alt='{}' class='attachment-preview' data-id='{}' />",
+                "<div class='image-attachment' data-url='{}' data-id='{}' name='{}'>Loading image preview...</div>",
                 path,
-                encode_text(&attachment.original_name),
-                attachment.id
+                attachment.download_token,
+                encode_text(&attachment.original_name)
             )
         }
         "application/pdf" => {
             format!(
                 "<div class='pdf-attachment' data-url='{}' data-id='{}'>Loading PDF preview...</div>",
                 path,
-                attachment.id
+                attachment.download_token
             )
         }
         "text/plain" => {
             format!(
                 "<div class='text-attachment' data-url='{}' data-id='{}'>Loading preview...</div>",
-                path, attachment.id
+                path, attachment.download_token
             )
         }
         _ => {
@@ -89,7 +92,7 @@ fn expand_attachment_html(attachment: &Attachment) -> String {
                 "<a href='{}' download='{}' class='attachment-download' data-id='{}'>Download {}</a>",
                 path,
                 encode_text(&attachment.original_name),
-                attachment.id,
+                attachment.download_token,
                 encode_text(&attachment.original_name)
             )
         }

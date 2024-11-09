@@ -6,8 +6,8 @@ use serde::Deserialize;
 pub struct Attachment {
     pub id: u32,
     pub mime: String,
-    pub download_url: String,
     pub original_name: String,
+    pub download_token: String,
 }
 pub type Attachments = Vec<Attachment>;
 
