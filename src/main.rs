@@ -297,7 +297,7 @@ impl Component for Model {
                                             <span class="timestamp">
                                                 { entry.timestamp.with_timezone(&Local).format("%H:%M:%S").to_string() }
                                             </span>
-                                            <span class="log-text">{markdown_to_html(&entry.log)}</span>
+                                            <span class="log-text">{markdown_to_html(entry)}</span>
                                         </li>
                                     </>
                                 }

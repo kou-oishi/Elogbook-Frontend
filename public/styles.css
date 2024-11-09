@@ -276,3 +276,16 @@ body {
     font-size: 0.9em;
     line-height: 1.2;
 }
+
+
+
+
+
+.text-attachment {
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #f9f9f9;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
