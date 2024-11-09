@@ -65,39 +65,26 @@ fn expand_attachment_html(attachment: &Attachment) -> String {
     match attachment.mime.as_str() {
         "image/png" | "image/jpeg" | "image/gif" => {
             format!(
-                "<img src='{}' alt='{}' />",
+                "<img src='{}' alt='{}' class='attachment-preview' data-id='{}' />",
                 path,
-                encode_text(&attachment.original_name)
+                encode_text(&attachment.original_name),
+                attachment.id
             )
         }
-
-        /*
-        "text/plain" => match ureq::get(&path).call() {
-            Ok(response) => {
-                if let Ok(content) = response.into_string() {
-                    format!(
-                            "<div class='text-attachment' style='max-height: 200px; overflow-y: auto;'><pre>{}</pre></div>",
-                            encode_text(&content)
-                        )
-                } else {
-                    format!(
-                        "<p>Failed to load content: {}</p>",
-                        encode_text(&attachment.original_name)
-                    )
-                }
-            }
-            Err(_) => format!(
-                "<p>Failed to fetch the content: {}</p>",
-                encode_text(&attachment.original_name)
-            ),
-        },
-        */
-        "application/octet-stream" => {
+        "text/plain" => {
             format!(
-                "<div class='code-attachment' style='max-height: 200px; overflow-y: auto;'><pre>{}</pre></div>",
-                html_escape::encode_text(&path)
+                "<div class='text-attachment' data-url='{}' data-id='{}'>Loading preview...</div>",
+                path, attachment.id
             )
         }
-        _ => String::new(),
+        _ => {
+            format!(
+                "<a href='{}' download='{}' class='attachment-download' data-id='{}'>Download {}</a>",
+                path,
+                encode_text(&attachment.original_name),
+                attachment.id,
+                encode_text(&attachment.original_name)
+            )
+        }
     }
 }
