@@ -1,7 +1,7 @@
 use anyhow::Error;
 use chrono::Local;
 use gloo_net::http::Request;
-use gloo_timers::callback::Timeout;
+use gloo_timers::callback::{Interval, Timeout};
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{FormData, HtmlElement};
@@ -11,34 +11,22 @@ mod models;
 use models::*;
 
 mod render;
-use render::*;
-
-pub struct Model {
-    entries: Vec<Entry>,
-    limit: i64,
-    offset: i64,
-    loading: bool,
-    content_ref: NodeRef, // NodeRef追加
-}
 
 impl Model {
-    // レンダー完了後にスクロール位置を設定する関数
+    // Control the scroll bar position
     fn scroll_to_position(&self, offset: i32, from_bottom: bool, waiting_time: u32) {
         let content_ref = self.content_ref.clone();
 
-        // 50ミリ秒待機してからスクロール位置を設定
         Timeout::new(waiting_time, move || {
             if let Some(content) = content_ref.cast::<HtmlElement>() {
                 if from_bottom {
-                    // 絶対的に最下部から offset だけ上にずらす
                     content.set_scroll_top(content.scroll_height() - offset);
                 } else {
-                    // 上部から offset だけ下にずらす
                     content.set_scroll_top(offset);
                 }
             }
         })
-        .forget(); // コールバックを忘却
+        .forget();
     }
 }
 
@@ -49,6 +37,7 @@ pub enum Msg {
     LoadMoreEntries,
     ReceiveResponse(Result<Vec<Entry>, Error>),
     ReceiveLatestEntry(Entry),
+    ExtendDownloadLifetime,
 }
 
 impl Component for Model {
@@ -59,22 +48,40 @@ impl Component for Model {
     /// create
     /////////////////////////////////////////////////////////////////////////////////////////////
     fn create(ctx: &Context<Self>) -> Self {
-        let default_limit = 20;
+        use rand::{distributions::Alphanumeric, Rng};
+
+        // A hash as client identifier
+        let hash: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(30)
+            .map(char::from)
+            .collect();
+
+        // Default config.
+        static DEFAULT_LIMIT: i64 = 20;
 
         let link = ctx.link().clone();
-        link.send_message(Msg::GetEntries(default_limit, 0));
-        let instance = Self {
-            entries: vec![],
-            limit: default_limit,
-            offset: 0,
-            loading: false,
-            content_ref: NodeRef::default(), // NodeRefの初期化
-        };
+        link.send_message(Msg::GetEntries(DEFAULT_LIMIT, 0));
 
-        // JavaScript側でアクセスできるように関数を登録
+        // Register a call back to JavaScript
         register_entry_callback(ctx.link().clone());
 
-        instance
+        // Trigger extend download lifetime every 2 mins
+        let callback = link.callback(|_| Msg::ExtendDownloadLifetime);
+        let interval = Interval::new(120_000, move || {
+            callback.emit(());
+        });
+
+        // Make the instance
+        Self {
+            client_hash: hash,
+            entries: vec![],
+            limit: DEFAULT_LIMIT,
+            offset: 0,
+            loading: false,
+            content_ref: NodeRef::default(),
+            interval: Some(interval),
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,15 +151,12 @@ impl Component for Model {
             Msg::GetEntries(limit, offset) => {
                 let link = ctx.link().clone();
                 self.loading = true;
-
+                let request = format!(
+                    "http://127.0.0.1:8080/get_entries?client={}&limit={}&offset={}",
+                    self.client_hash, limit, offset
+                );
                 spawn_local(async move {
-                    if let Ok(response) = Request::get(&format!(
-                        "http://127.0.0.1:8080/get_entries?limit={}&offset={}",
-                        limit, offset
-                    ))
-                    .send()
-                    .await
-                    {
+                    if let Ok(response) = Request::get(&request).send().await {
                         if let Ok(json) = response.json::<Vec<EntryResponse>>().await {
                             let entries: Vec<Entry> = json
                                 .into_iter()
@@ -185,7 +189,7 @@ impl Component for Model {
             // ReceiveLatestEntry
             // ---------------------------------------------------------------------------
             Msg::ReceiveLatestEntry(new_entry) => {
-                // 新しいエントリーをリストの先頭に追加
+                // For the new input entry
                 self.entries.push(new_entry);
                 self.offset += 1;
                 self.loading = false;
@@ -233,6 +237,18 @@ impl Component for Model {
                     }
                 }
             }
+
+            // ---------------------------------------------------------------------------
+            // Message: ExtendDownloadLifetime
+            // ---------------------------------------------------------------------------
+            Msg::ExtendDownloadLifetime => {
+                let request = format!("http://127.0.0.1:8080/extend?client={}", self.client_hash);
+                spawn_local(async move {
+                    // Don't care the result
+                    let _ = Request::post(&request).send().await;
+                });
+                false
+            }
         }
     }
 
@@ -244,7 +260,7 @@ impl Component for Model {
             // Force to scroll down
             self.scroll_to_position(0, true, 300);
 
-            // スクロールイベントリスナーを追加
+            // Scroll event listener
             let link = ctx.link().clone();
             let content_ref = self.content_ref.clone();
             let callback = Closure::<dyn Fn()>::new(move || {
@@ -255,14 +271,12 @@ impl Component for Model {
                 }
             });
 
-            // スクロールイベントをリッスン
+            // Listen scroll event
             if let Some(content) = self.content_ref.cast::<HtmlElement>() {
                 content
                     .add_event_listener_with_callback("scroll", callback.as_ref().unchecked_ref())
                     .unwrap();
             }
-
-            // イベントハンドラを保持
             callback.forget();
         }
     }
@@ -300,7 +314,7 @@ impl Component for Model {
                                             <span class="timestamp">
                                                 { entry.timestamp.with_timezone(&Local).format("%H:%M:%S").to_string() }
                                             </span>
-                                            <span class="log-text">{markdown_to_html(entry)}</span>
+                                            <span class="log-text">{self.markdown_to_html(entry)}</span>
                                         </li>
                                     </>
                                 }
@@ -324,7 +338,7 @@ impl Component for Model {
 
 // Interface to Java Script
 fn register_entry_callback(link: yew::html::Scope<Model>) {
-    // クロージャを作成してJavaScript側に公開
+    // Make a closure and open it to JavaScript
     let callback = Closure::wrap(Box::new(move |content: JsValue, array: JsValue| {
         let content_str = content.as_string().unwrap_or_default();
         let files = js_sys::Array::from(&array);

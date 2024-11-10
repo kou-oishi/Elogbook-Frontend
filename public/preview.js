@@ -33,7 +33,6 @@ function initializeAttachmentPreviews() {
         } else if (element.classList.contains("pdf-attachment")) {
           updatePdfAttachment(id, cachedContent.objectUrl);
         } else if (element.classList.contains("image-attachment")) {
-          console.log("Cached image: ", cachedContent);
           updateImageAttachment(id, cachedContent.base64, cachedContent.name);
         }
         // Fetch it newly
@@ -44,7 +43,6 @@ function initializeAttachmentPreviews() {
           fetchPreview(url, id, "pdf");
         } else if (element.classList.contains("image-attachment")) {
           const name = element.getAttribute("name");
-          console.log("Fetching image: ", url, name);
           fetchPreview(url, id, "image", name);
         }
       }
@@ -72,7 +70,6 @@ async function fetchPreview(url, id, type, opt = "") {
         updatePdfAttachment(id, objectUrl);
         previewCache.set(id, { type, objectUrl });
       } else if (type === "image") {
-        console.log("image url and content: ", url, content);
         const base64 = await blobToBase64(content);
         updateImageAttachment(id, base64);
         previewCache.set(id, { type, base64, name: opt });

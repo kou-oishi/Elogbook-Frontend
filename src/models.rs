@@ -1,5 +1,6 @@
 use chrono::{DateTime, Local};
 use serde::Deserialize;
+use yew::prelude::*;
 
 // From the backend
 #[derive(Debug, Deserialize)]
@@ -54,4 +55,14 @@ impl Entry {
             attachments: attachments,
         }
     }
+}
+
+pub struct Model {
+    pub client_hash: String,
+    pub entries: Vec<Entry>,
+    pub limit: i64,
+    pub offset: i64,
+    pub loading: bool,
+    pub content_ref: NodeRef,
+    pub interval: Option<gloo_timers::callback::Interval>,
 }
